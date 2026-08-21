@@ -1,4 +1,4 @@
-# Orange Pi Custom Modules
+# Orange Pi Custom Modules For Debian Trixie Kernel  6.6.98-sun60iw2
 
 A custom Debian package for **Orange Pi** that provides the required kernel modules and configuration to enable the following features:
 
