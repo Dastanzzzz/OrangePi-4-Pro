@@ -2,12 +2,12 @@
 
 A custom Debian package set for **Orange Pi** that provides additional kernel modules and configuration required to enable the following features:
 
-* **TUN** — required by Tailscale
-* **POSIX MQUEUE** — required by CIFS
-* **OverlayFS** — required by Docker
-* **UTF-8** — provides UTF-8 support through `nls_utf8`
-* **WireGuard** — provides the WireGuard kernel module for VPN support
-* **CIFS** — provides the CIFS/SMB filesystem kernel module
+* **TUN** 
+* **POSIX MQUEUE** 
+* **OverlayFS** 
+* **UTF-8** 
+* **WireGuard** 
+* **CIFS** 
 
 ## Installation
 
