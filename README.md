@@ -244,6 +244,7 @@ The WireGuard and CIFS packages are kernel-version specific and must match the r
 Kernel:    6.6.98-sun60iw2
 WireGuard: wireguard-6.6.98-sun60iw2.deb
 CIFS:      cifs-6.6.98-sun60iw2.deb
+Overlays:  overlayfs-config-6.6.98-sun60iw2.deb
 ```
 
 ## Notes
