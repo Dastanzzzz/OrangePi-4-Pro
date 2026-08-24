@@ -29,6 +29,12 @@ Install the CIFS kernel module package:
 sudo dpkg -i ~/cifs-6.6.98-sun60iw2.deb
 ```
 
+Install the Overlays kernel module package:
+
+```bash
+sudo dpkg -i overlayfs-config-6.6.98-sun60iw2.deb
+```
+
 Update the kernel module dependency database:
 
 ```bash
