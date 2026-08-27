@@ -65,7 +65,20 @@ Architecture: ARM64
 | `ovpn-backports-kmod_7.1.0-1_arm64.deb` | OpenVPN DCO kernel module                   |
 
 ## Installation
+### Using Install.sh
 
+The easiest way to install the required kernel modules is using the included `install.sh` script.
+
+Clone the repository:
+
+```bash
+git clone https://github.com/Dastanzzzz/OrangePi-4-Pro.git
+cd OrangePi-4-Pro
+chmod +x install.sh
+./install.sh
+```
+
+### Manualy 
 ### 1. Verify the Kernel
 
 Check the currently running kernel:
