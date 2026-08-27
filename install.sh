@@ -32,12 +32,15 @@ REQUIRED_ARCH="aarch64"
 
 TMP_DIR="/tmp/orangepi-custom-modules"
 
-# Package names
 PKG_TUN="orangepi-custom-modules_1.0_arm64.deb"
 PKG_WIREGUARD="wireguard-6.6.98-sun60iw2.deb"
 PKG_CIFS="cifs-6.6.98-sun60iw2.deb"
 PKG_OVERLAY="overlayfs-config-6.6.98-sun60iw2.deb"
 PKG_OVPN="ovpn-backports-kmod_7.1.0-1_arm64.deb"
+
+DOWNLOAD_CMD=""
+
+SELECTED=()
 
 # ------------------------------------------------------------
 # Colors
@@ -147,19 +150,11 @@ check_system() {
     echo "Kernel       : $kernel"
     echo
 
-    # --------------------------------------------------------
-    # Architecture
-    # --------------------------------------------------------
-
     if [[ "$arch" != "$REQUIRED_ARCH" ]]; then
         die "Unsupported architecture: $arch. Required: $REQUIRED_ARCH"
     fi
 
     success "Architecture: ARM64"
-
-    # --------------------------------------------------------
-    # Kernel
-    # --------------------------------------------------------
 
     if [[ "$kernel" != "$REQUIRED_KERNEL" ]]; then
         echo
@@ -174,19 +169,11 @@ check_system() {
 
     success "Kernel: $REQUIRED_KERNEL"
 
-    # --------------------------------------------------------
-    # dpkg
-    # --------------------------------------------------------
-
     if ! command -v dpkg >/dev/null 2>&1; then
         die "dpkg was not found."
     fi
 
     success "dpkg found"
-
-    # --------------------------------------------------------
-    # dpkg-deb
-    # --------------------------------------------------------
 
     if ! command -v dpkg-deb >/dev/null 2>&1; then
         die "dpkg-deb was not found."
@@ -194,29 +181,17 @@ check_system() {
 
     success "dpkg-deb found"
 
-    # --------------------------------------------------------
-    # modprobe
-    # --------------------------------------------------------
-
     if ! command -v modprobe >/dev/null 2>&1; then
         die "modprobe was not found."
     fi
 
     success "modprobe found"
 
-    # --------------------------------------------------------
-    # depmod
-    # --------------------------------------------------------
-
     if ! command -v depmod >/dev/null 2>&1; then
         die "depmod was not found."
     fi
 
     success "depmod found"
-
-    # --------------------------------------------------------
-    # Download utility
-    # --------------------------------------------------------
 
     if command -v curl >/dev/null 2>&1; then
         DOWNLOAD_CMD="curl"
@@ -248,14 +223,19 @@ download_package() {
     output="${TMP_DIR}/${package}"
 
     if [[ -f "$output" ]]; then
-        success "Already downloaded: $package"
-        echo "$output"
-        return 0
+        if dpkg-deb --info "$output" >/dev/null 2>&1; then
+            success "Already downloaded: $package" >&2
+            echo "$output"
+            return 0
+        fi
+
+        warn "Existing file is invalid. Re-downloading: $package" >&2
+        rm -f "$output"
     fi
 
-    echo
-    info "Downloading:"
-    echo "  $package"
+    echo >&2
+    info "Downloading:" >&2
+    echo "  $package" >&2
 
     if [[ "$DOWNLOAD_CMD" == "curl" ]]; then
 
@@ -265,37 +245,45 @@ download_package() {
             --show-error \
             --progress-bar \
             "$url" \
-            --output "$output"; then
+            --output "$output" >&2; then
 
             rm -f "$output"
 
             error "Failed to download package."
-            echo "URL: $url"
+            error "URL: $url"
+
+            return 1
+        fi
+
+    elif [[ "$DOWNLOAD_CMD" == "wget" ]]; then
+
+        if ! wget \
+            --show-progress \
+            "$url" \
+            --output-document="$output" >&2; then
+
+            rm -f "$output"
+
+            error "Failed to download package."
+            error "URL: $url"
 
             return 1
         fi
 
     else
 
-        if ! wget \
-            --quiet \
-            --show-progress \
-            "$url" \
-            --output-document="$output"; then
-
-            rm -f "$output"
-
-            error "Failed to download package."
-            echo "URL: $url"
-
-            return 1
-        fi
-
+        error "No supported download utility found."
+        return 1
     fi
 
-    # --------------------------------------------------------
-    # Validate Debian package
-    # --------------------------------------------------------
+    if [[ ! -s "$output" ]]; then
+        rm -f "$output"
+
+        error "Downloaded file is empty:"
+        error "$package"
+
+        return 1
+    fi
 
     if ! dpkg-deb --info "$output" >/dev/null 2>&1; then
         rm -f "$output"
@@ -306,8 +294,9 @@ download_package() {
         return 1
     fi
 
-    success "Downloaded: $package"
+    success "Downloaded: $package" >&2
 
+    # stdout ONLY returns the package path.
     echo "$output"
 }
 
@@ -323,7 +312,10 @@ install_package() {
 
     local deb
 
-    deb="$(download_package "$package")" || return 1
+    if ! deb="$(download_package "$package")"; then
+        error "Could not download: $package"
+        return 1
+    fi
 
     echo
 
@@ -334,17 +326,12 @@ install_package() {
 
     warn "dpkg reported an installation problem."
 
-    # --------------------------------------------------------
-    # Attempt dependency repair
-    # --------------------------------------------------------
-
     if command -v apt-get >/dev/null 2>&1; then
 
         info "Attempting to fix package dependencies..."
 
         if apt-get install -f -y; then
 
-            # Verify package is installed after dependency fix
             if dpkg-query \
                 -W \
                 -f='${Status}' \
@@ -384,6 +371,89 @@ load_module() {
 }
 
 # ------------------------------------------------------------
+# Verification helpers
+# ------------------------------------------------------------
+
+verify_tun() {
+    if [[ -c /dev/net/tun ]]; then
+        success "TUN: OK"
+    else
+        warn "TUN: NOT AVAILABLE"
+    fi
+}
+
+verify_posix() {
+    if mountpoint -q /dev/mqueue 2>/dev/null; then
+        success "POSIX MQUEUE: OK"
+    else
+        warn "POSIX MQUEUE: NOT ACTIVE"
+    fi
+}
+
+verify_overlay() {
+    if grep -qw overlay /proc/filesystems; then
+        success "OverlayFS: OK"
+    else
+        warn "OverlayFS: NOT AVAILABLE"
+    fi
+}
+
+verify_utf8() {
+    if [[ "$(locale charmap 2>/dev/null)" == "UTF-8" ]]; then
+        success "UTF-8 locale: OK"
+    else
+        warn "UTF-8 locale: NOT UTF-8"
+    fi
+
+    if lsmod | grep -qw nls_utf8; then
+        success "nls_utf8: OK"
+    else
+        warn "nls_utf8: NOT LOADED"
+    fi
+}
+
+verify_wireguard() {
+    if lsmod | grep -qw wireguard; then
+        success "WireGuard: OK"
+    else
+        warn "WireGuard: NOT LOADED"
+    fi
+}
+
+verify_cifs() {
+    if lsmod | grep -qw cifs; then
+        success "CIFS: OK"
+    else
+        warn "CIFS: NOT LOADED"
+    fi
+
+    for module in \
+        netfs \
+        dns_resolver \
+        cifs_md4 \
+        cifs_arc4
+    do
+        if lsmod | grep -qw "$module"; then
+            success "$module: loaded"
+        fi
+    done
+}
+
+verify_ovpn() {
+    if lsmod | grep -qw ovpn; then
+        success "OpenVPN DCO (ovpn): OK"
+    else
+        warn "OpenVPN DCO (ovpn): NOT LOADED"
+    fi
+
+    if lsmod | grep -qw strparser; then
+        success "strparser: OK"
+    else
+        warn "strparser: NOT LOADED"
+    fi
+}
+
+# ------------------------------------------------------------
 # TUN + POSIX MQUEUE + UTF-8
 # ------------------------------------------------------------
 
@@ -405,23 +475,11 @@ install_tun_posix_utf8() {
 
     success "depmod completed."
 
-    # --------------------------------------------------------
-    # TUN
-    # --------------------------------------------------------
-
     echo
     load_module tun || true
 
-    # --------------------------------------------------------
-    # UTF-8 NLS
-    # --------------------------------------------------------
-
     echo
     load_module nls_utf8 || true
-
-    # --------------------------------------------------------
-    # POSIX MQUEUE
-    # --------------------------------------------------------
 
     echo
     info "Checking POSIX MQUEUE..."
@@ -441,10 +499,6 @@ install_tun_posix_utf8() {
         fi
 
     fi
-
-    # --------------------------------------------------------
-    # Verification
-    # --------------------------------------------------------
 
     echo
     verify_tun
@@ -474,7 +528,6 @@ install_overlay() {
 
     success "depmod completed."
 
-    # OverlayFS can be built into the kernel.
     modprobe overlay 2>/dev/null || true
 
     echo
@@ -572,96 +625,6 @@ install_ovpn() {
 }
 
 # ------------------------------------------------------------
-# Verification helpers
-# ------------------------------------------------------------
-
-verify_tun() {
-
-    if [[ -c /dev/net/tun ]]; then
-        success "TUN: OK"
-    else
-        warn "TUN: NOT AVAILABLE"
-    fi
-}
-
-verify_posix() {
-
-    if mountpoint -q /dev/mqueue 2>/dev/null; then
-        success "POSIX MQUEUE: OK"
-    else
-        warn "POSIX MQUEUE: NOT ACTIVE"
-    fi
-}
-
-verify_overlay() {
-
-    if grep -qw overlay /proc/filesystems; then
-        success "OverlayFS: OK"
-    else
-        warn "OverlayFS: NOT AVAILABLE"
-    fi
-}
-
-verify_utf8() {
-
-    if [[ "$(locale charmap 2>/dev/null)" == "UTF-8" ]]; then
-        success "UTF-8 locale: OK"
-    else
-        warn "UTF-8 locale: NOT UTF-8"
-    fi
-
-    if lsmod | grep -qw nls_utf8; then
-        success "nls_utf8: OK"
-    else
-        warn "nls_utf8: NOT LOADED"
-    fi
-}
-
-verify_wireguard() {
-
-    if lsmod | grep -qw wireguard; then
-        success "WireGuard: OK"
-    else
-        warn "WireGuard: NOT LOADED"
-    fi
-}
-
-verify_cifs() {
-
-    if lsmod | grep -qw cifs; then
-        success "CIFS: OK"
-    else
-        warn "CIFS: NOT LOADED"
-    fi
-
-    for module in \
-        netfs \
-        dns_resolver \
-        cifs_md4 \
-        cifs_arc4
-    do
-        if lsmod | grep -qw "$module"; then
-            success "$module: loaded"
-        fi
-    done
-}
-
-verify_ovpn() {
-
-    if lsmod | grep -qw ovpn; then
-        success "OpenVPN DCO (ovpn): OK"
-    else
-        warn "OpenVPN DCO (ovpn): NOT LOADED"
-    fi
-
-    if lsmod | grep -qw strparser; then
-        success "strparser: OK"
-    else
-        warn "strparser: NOT LOADED"
-    fi
-}
-
-# ------------------------------------------------------------
 # Verify all
 # ------------------------------------------------------------
 
@@ -715,7 +678,6 @@ verify_all() {
     echo "=== MODULE INFORMATION ==="
 
     if modinfo ovpn >/dev/null 2>&1; then
-
         echo
         echo "--- ovpn ---"
 
@@ -725,7 +687,6 @@ verify_all() {
     fi
 
     if modinfo strparser >/dev/null 2>&1; then
-
         echo
         echo "--- strparser ---"
 
@@ -750,28 +711,23 @@ show_selected() {
     for choice in "${SELECTED[@]}"; do
 
         case "$choice" in
-
             1)
                 echo "  ✓ TUN + POSIX MQUEUE + UTF-8"
                 ;;
-
             2)
                 echo "  ✓ OverlayFS"
                 ;;
-
             3)
                 echo "  ✓ WireGuard"
                 ;;
-
             4)
                 echo "  ✓ CIFS / SMB"
                 ;;
-
             5)
                 echo "  ✓ OpenVPN DCO"
                 ;;
-
         esac
+
     done
 }
 
@@ -811,47 +767,27 @@ EOF
         return 1
     fi
 
-    # --------------------------------------------------------
-    # Cancel
-    # --------------------------------------------------------
-
     for choice in $selections; do
-
         if [[ "$choice" == "0" ]]; then
             info "Installation cancelled."
             return 1
         fi
-
     done
 
-    # --------------------------------------------------------
-    # ALL
-    # --------------------------------------------------------
-
     for choice in $selections; do
-
         if [[ "$choice" == "6" ]]; then
-
             SELECTED=(1 2 3 4 5)
-
             show_selected
-
             echo
             return 0
         fi
-
     done
-
-    # --------------------------------------------------------
-    # Validate choices
-    # --------------------------------------------------------
 
     SELECTED=()
 
     for choice in $selections; do
 
         case "$choice" in
-
             1|2|3|4|5)
                 SELECTED+=("$choice")
                 ;;
@@ -860,7 +796,6 @@ EOF
                 error "Invalid option: $choice"
                 return 1
                 ;;
-
         esac
 
     done
@@ -869,10 +804,6 @@ EOF
         warn "No valid modules selected."
         return 1
     fi
-
-    # --------------------------------------------------------
-    # Remove duplicate selections
-    # --------------------------------------------------------
 
     mapfile -t SELECTED < <(
         printf '%s\n' "${SELECTED[@]}" |
@@ -944,10 +875,6 @@ install_selected() {
         echo
     done
 
-    # --------------------------------------------------------
-    # Final depmod
-    # --------------------------------------------------------
-
     info "Running final depmod..."
 
     depmod -a
@@ -1007,38 +934,29 @@ EOF
         case "$menu_choice" in
 
             1)
-
                 if select_modules; then
                     install_selected || true
                     pause
                 else
                     pause
                 fi
-
                 ;;
 
             2)
-
                 verify_all
                 pause
-
                 ;;
 
             0)
-
                 echo
                 info "Exiting installer."
                 exit 0
-
                 ;;
 
             *)
-
                 warn "Invalid option."
                 sleep 1
-
                 ;;
-
         esac
 
     done
