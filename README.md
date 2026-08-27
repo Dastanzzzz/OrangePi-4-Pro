@@ -7,7 +7,8 @@ A custom Debian package set for **Orange Pi** that provides additional kernel mo
 * **OverlayFS** 
 * **UTF-8** 
 * **WireGuard** 
-* **CIFS** 
+* **CIFS**
+* **OPEN VPN Module** 
 
 ## Installation
 
@@ -35,6 +36,12 @@ Install the Overlays kernel module package:
 sudo dpkg -i overlayfs-config-6.6.98-sun60iw2.deb
 ```
 
+Install the Open VPN kernel module package:
+
+```bash
+sudo dpkg -i ~/ovpn-backports-kmod_7.1.0-1_arm64.deb
+```
+
 Update the kernel module dependency database:
 
 ```bash
@@ -48,6 +55,7 @@ sudo modprobe tun
 sudo modprobe nls_utf8
 sudo modprobe wireguard
 sudo modprobe cifs
+sudo modprobe ovpn
 ```
 
 > **Note:** The `wireguard-6.6.98-sun60iw2.deb` and `cifs-6.6.98-sun60iw2.deb` packages are built specifically for kernel `6.6.98-sun60iw2`. Make sure the running kernel matches this version.
@@ -135,6 +143,13 @@ Verify the CIFS module and its related dependencies:
 
 ```bash
 lsmod | grep -E 'cifs|netfs|dns_resolver|cifs_md4|cifs_arc4'
+```
+
+Verify the Open VPN module and its related dependencies:
+
+```bash
+modinfo ovpn | grep -E 'filename|version|depends|vermagic'
+modinfo strparser | grep -E 'filename|vermagic'
 ```
 
 The output should include `cifs` and its required dependencies where applicable.
