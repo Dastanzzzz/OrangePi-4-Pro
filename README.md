@@ -204,6 +204,11 @@ OK
 
 === CIFS ===
 OK
+
+=== OVPN DCO ===
+ovpn: OK
+strparser: OK
+
 ```
 
 ## Supported Features
@@ -216,6 +221,8 @@ OK
 | UTF-8        | ✅ Enabled | `nls_utf8`         | UTF-8 filename support  |
 | WireGuard    | ✅ Enabled | `wireguard`        | VPN / WireGuard         |
 | CIFS         | ✅ Enabled | `cifs`             | SMB/CIFS network shares |
+| OVPN         | ✅ Enabled | `ovpn`             | Open VPN Module         |
+
 
 ## Kernel Modules
 
