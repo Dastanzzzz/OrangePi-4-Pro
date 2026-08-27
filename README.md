@@ -1,66 +1,29 @@
 # Orange Pi Custom Modules for Debian Trixie Kernel 6.6.98-sun60iw2
 
-A custom Debian package set for **Orange Pi** that provides additional kernel modules and configuration required to enable the following features:
+A custom Debian package set for **Orange Pi** running Debian Trixie with kernel `6.6.98-sun60iw2`.
 
-* **TUN** 
-* **POSIX MQUEUE** 
-* **OverlayFS** 
-* **UTF-8** 
-* **WireGuard** 
-* **CIFS**
-* **OPEN VPN Module** 
+This package set provides additional kernel modules and configuration required to enable:
 
-## Installation
+* **TUN**
+* **POSIX MQUEUE**
+* **OverlayFS**
+* **UTF-8**
+* **WireGuard**
+* **CIFS/SMB**
+* **OpenVPN DCO**
 
-Install the custom kernel modules package:
+> **Important:** All kernel modules and packages in this package set are built specifically for kernel `6.6.98-sun60iw2`. They are not intended for use with other kernel versions.
 
-```bash
-sudo dpkg -i ~/orangepi-custom-modules_1.0_arm64.deb
-```
+## Requirements
 
-Install the WireGuard kernel module package:
+* **Architecture:** ARM64
+* **Platform:** Orange Pi
+* **OS:** Debian Trixie / Debian-based Linux
+* **Kernel:** `6.6.98-sun60iw2`
+* `dpkg`
+* Root or `sudo` access
 
-```bash
-sudo dpkg -i ~/wireguard-6.6.98-sun60iw2.deb
-```
-
-Install the CIFS kernel module package:
-
-```bash
-sudo dpkg -i ~/cifs-6.6.98-sun60iw2.deb
-```
-
-Install the Overlays kernel module package:
-
-```bash
-sudo dpkg -i overlayfs-config-6.6.98-sun60iw2.deb
-```
-
-Install the Open VPN kernel module package:
-
-```bash
-sudo dpkg -i ~/ovpn-backports-kmod_7.1.0-1_arm64.deb
-```
-
-Update the kernel module dependency database:
-
-```bash
-sudo depmod -a
-```
-
-Load the required kernel modules:
-
-```bash
-sudo modprobe tun
-sudo modprobe nls_utf8
-sudo modprobe wireguard
-sudo modprobe cifs
-sudo modprobe ovpn
-```
-
-> **Note:** The `wireguard-6.6.98-sun60iw2.deb` and `cifs-6.6.98-sun60iw2.deb` packages are built specifically for kernel `6.6.98-sun60iw2`. Make sure the running kernel matches this version.
-
-Check the running kernel version:
+Before installing, verify the running kernel:
 
 ```bash
 uname -r
@@ -72,6 +35,103 @@ Expected:
 6.6.98-sun60iw2
 ```
 
+> **Do not install these packages if `uname -r` does not return `6.6.98-sun60iw2`.**
+
+## Packages
+
+The package set contains the following Debian packages:
+
+```text
+orangepi-custom-modules_1.0_arm64.deb
+wireguard-6.6.98-sun60iw2.deb
+cifs-6.6.98-sun60iw2.deb
+overlayfs-config-6.6.98-sun60iw2.deb
+ovpn-backports-kmod_7.1.0-1_arm64.deb
+```
+
+All packages are intended to be used with:
+
+```text
+Kernel: 6.6.98-sun60iw2
+Architecture: ARM64
+```
+
+| Package                                 | Purpose                                     |
+| --------------------------------------- | ------------------------------------------- |
+| `orangepi-custom-modules_1.0_arm64.deb` | Additional kernel modules and configuration |
+| `wireguard-6.6.98-sun60iw2.deb`         | WireGuard kernel module                     |
+| `cifs-6.6.98-sun60iw2.deb`              | CIFS/SMB kernel module                      |
+| `overlayfs-config-6.6.98-sun60iw2.deb`  | OverlayFS configuration                     |
+| `ovpn-backports-kmod_7.1.0-1_arm64.deb` | OpenVPN DCO kernel module                   |
+
+## Installation
+
+### 1. Verify the Kernel
+
+Check the currently running kernel:
+
+```bash
+uname -r
+```
+
+The output must be:
+
+```text
+6.6.98-sun60iw2
+```
+
+If a different kernel version is detected, **do not continue with the installation**.
+
+### 2. Install the Packages
+
+Install the custom kernel modules:
+
+```bash
+sudo dpkg -i ~/orangepi-custom-modules_1.0_arm64.deb
+```
+
+Install WireGuard:
+
+```bash
+sudo dpkg -i ~/wireguard-6.6.98-sun60iw2.deb
+```
+
+Install CIFS:
+
+```bash
+sudo dpkg -i ~/cifs-6.6.98-sun60iw2.deb
+```
+
+Install OverlayFS configuration:
+
+```bash
+sudo dpkg -i ~/overlayfs-config-6.6.98-sun60iw2.deb
+```
+
+Install OpenVPN DCO:
+
+```bash
+sudo dpkg -i ~/ovpn-backports-kmod_7.1.0-1_arm64.deb
+```
+
+### 3. Update the Module Dependency Database
+
+After installing all packages:
+
+```bash
+sudo depmod -a
+```
+
+### 4. Load the Required Modules
+
+```bash
+sudo modprobe tun
+sudo modprobe nls_utf8
+sudo modprobe wireguard
+sudo modprobe cifs
+sudo modprobe ovpn
+```
+
 ## Verify Installation
 
 ### TUN
@@ -79,7 +139,6 @@ Expected:
 Verify that the TUN device is available:
 
 ```bash
-echo "=== TUN ==="
 test -c /dev/net/tun && echo "OK" || echo "NOT AVAILABLE"
 ```
 
@@ -88,7 +147,6 @@ test -c /dev/net/tun && echo "OK" || echo "NOT AVAILABLE"
 Verify that the POSIX message queue filesystem is mounted:
 
 ```bash
-echo "=== POSIX MQUEUE ==="
 mountpoint -q /dev/mqueue && echo "OK" || echo "NOT ACTIVE"
 ```
 
@@ -97,96 +155,111 @@ mountpoint -q /dev/mqueue && echo "OK" || echo "NOT ACTIVE"
 Verify that OverlayFS is supported by the kernel:
 
 ```bash
-echo "=== OVERLAYFS ==="
 grep -qw overlay /proc/filesystems && echo "OK" || echo "NOT AVAILABLE"
 ```
 
 ### UTF-8
 
-Verify UTF-8 locale support:
+Verify the current locale:
 
 ```bash
-echo "=== UTF-8 ==="
-[ "$(locale charmap 2>/dev/null)" = "UTF-8" ] && echo "OK" || echo "NOT UTF-8"
+[ "$(locale charmap 2>/dev/null)" = "UTF-8" ] && echo "locale: OK" || echo "locale: NOT UTF-8"
+```
+
+Verify the UTF-8 NLS module:
+
+```bash
+lsmod | grep -qw nls_utf8 && echo "nls_utf8: OK" || echo "nls_utf8: NOT LOADED"
 ```
 
 ### WireGuard
 
-Verify that the WireGuard kernel module is loaded:
+Verify the WireGuard kernel module:
 
 ```bash
-echo "=== WIREGUARD ==="
 lsmod | grep -qw wireguard && echo "OK" || echo "NOT LOADED"
-```
-
-If the module is not loaded:
-
-```bash
-sudo modprobe wireguard
-```
-
-Then verify:
-
-```bash
-lsmod | grep wireguard
 ```
 
 ### CIFS
 
-Load the CIFS kernel module:
+Verify the CIFS kernel module:
 
 ```bash
-sudo modprobe cifs
+lsmod | grep -qw cifs && echo "cifs: OK" || echo "cifs: NOT LOADED"
 ```
 
-Verify the CIFS module and its related dependencies:
+Check related dependencies:
 
 ```bash
-lsmod | grep -E 'cifs|netfs|dns_resolver|cifs_md4|cifs_arc4'
+lsmod | grep -E 'netfs|dns_resolver|cifs_md4|cifs_arc4'
 ```
 
-Verify the Open VPN module and its related dependencies:
+### OpenVPN DCO
+
+Verify the OpenVPN DCO kernel module:
+
+```bash
+lsmod | grep -qw ovpn && echo "ovpn: OK" || echo "ovpn: NOT LOADED"
+```
+
+Verify the `strparser` dependency:
+
+```bash
+lsmod | grep -qw strparser && echo "strparser: OK" || echo "strparser: NOT LOADED"
+```
+
+Additional module information:
 
 ```bash
 modinfo ovpn | grep -E 'filename|version|depends|vermagic'
 modinfo strparser | grep -E 'filename|vermagic'
 ```
 
-The output should include `cifs` and its required dependencies where applicable.
-
 ## Quick Verification
 
-All features can also be checked together:
+All features can be checked together:
 
 ```bash
+echo "=== KERNEL ==="
+uname -r
+
+echo
 echo "=== TUN ==="
 test -c /dev/net/tun && echo "OK" || echo "NOT AVAILABLE"
 
+echo
 echo "=== POSIX MQUEUE ==="
 mountpoint -q /dev/mqueue && echo "OK" || echo "NOT ACTIVE"
 
+echo
 echo "=== OVERLAYFS ==="
 grep -qw overlay /proc/filesystems && echo "OK" || echo "NOT AVAILABLE"
 
+echo
 echo "=== UTF-8 ==="
-[ "$(locale charmap 2>/dev/null)" = "UTF-8" ] && echo "OK" || echo "NOT UTF-8"
+[ "$(locale charmap 2>/dev/null)" = "UTF-8" ] && echo "locale: OK" || echo "locale: NOT UTF-8"
+lsmod | grep -qw nls_utf8 && echo "nls_utf8: OK" || echo "nls_utf8: NOT LOADED"
 
+echo
 echo "=== WIREGUARD ==="
 lsmod | grep -qw wireguard && echo "OK" || echo "NOT LOADED"
 
+echo
 echo "=== CIFS ==="
 lsmod | grep -qw cifs && echo "OK" || echo "NOT LOADED"
 
+echo
 echo "=== OVPN DCO ==="
 lsmod | grep -qw ovpn && echo "ovpn: OK" || echo "ovpn: NOT LOADED"
 lsmod | grep -qw strparser && echo "strparser: OK" || echo "strparser: NOT LOADED"
-
-
 ```
 
 Expected output:
 
 ```text
+=== KERNEL ===
+6.6.98-sun60iw2
+
 === TUN ===
 OK
 
@@ -197,7 +270,8 @@ OK
 OK
 
 === UTF-8 ===
-OK
+locale: OK
+nls_utf8: OK
 
 === WIREGUARD ===
 OK
@@ -208,25 +282,23 @@ OK
 === OVPN DCO ===
 ovpn: OK
 strparser: OK
-
 ```
 
 ## Supported Features
 
-| Feature      | Status    | Module / Component | Use Case                |
-| ------------ | --------- | ------------------ | ----------------------- |
-| TUN          | ✅ Enabled | `tun`              | Tailscale               |
-| POSIX MQUEUE | ✅ Enabled | `mqueue`           | CIFS / POSIX IPC        |
-| OverlayFS    | ✅ Enabled | `overlay`          | Docker                  |
-| UTF-8        | ✅ Enabled | `nls_utf8`         | UTF-8 filename support  |
-| WireGuard    | ✅ Enabled | `wireguard`        | VPN / WireGuard         |
-| CIFS         | ✅ Enabled | `cifs`             | SMB/CIFS network shares |
-| OVPN         | ✅ Enabled | `ovpn`             | Open VPN Module         |
-
+| Feature      | Status    | Module / Component | Use Case                    |
+| ------------ | --------- | ------------------ | --------------------------- |
+| TUN          | ✅ Enabled | `tun`              | VPN / tunneling             |
+| POSIX MQUEUE | ✅ Enabled | `mqueue`           | POSIX IPC                   |
+| OverlayFS    | ✅ Enabled | `overlay`          | Docker / container storage  |
+| UTF-8        | ✅ Enabled | `nls_utf8`         | UTF-8 filename support      |
+| WireGuard    | ✅ Enabled | `wireguard`        | VPN                         |
+| CIFS         | ✅ Enabled | `cifs`             | SMB/CIFS network shares     |
+| OpenVPN DCO  | ✅ Enabled | `ovpn`             | OpenVPN kernel acceleration |
 
 ## Kernel Modules
 
-The following modules are provided or required by the package set:
+The package set provides or requires the following kernel modules:
 
 ```text
 tun
@@ -237,62 +309,13 @@ netfs
 dns_resolver
 cifs_md4
 cifs_arc4
+ovpn
+strparser
 ```
 
-Some modules, such as `netfs`, `dns_resolver`, `cifs_md4`, and `cifs_arc4`, may be automatically loaded as dependencies when `cifs` is loaded.
+Some modules are loaded automatically as dependencies when their parent module is loaded.
 
-Check the currently loaded modules with:
-
-```bash
-lsmod | grep -E 'tun|nls_utf8|wireguard|cifs|netfs|dns_resolver|cifs_md4|cifs_arc4'
-```
-
-## Requirements
-
-* **Architecture:** ARM64
-* **Platform:** Orange Pi
-* **OS:** Debian Trixie / Debian-based Linux
-* **Kernel:** `6.6.98-sun60iw2`
-* `dpkg`
-* Root or `sudo` access
-
-## Packages
-
-The installation requires the following Debian packages:
-
-```text
-orangepi-custom-modules_1.0_arm64.deb
-wireguard-6.6.98-sun60iw2.deb
-cifs-6.6.98-sun60iw2.deb
-```
-
-The WireGuard and CIFS packages are kernel-version specific and must match the running kernel:
-
-```text
-Kernel:    6.6.98-sun60iw2
-WireGuard: wireguard-6.6.98-sun60iw2.deb
-CIFS:      cifs-6.6.98-sun60iw2.deb
-Overlays:  overlayfs-config-6.6.98-sun60iw2.deb
-```
-
-## Notes
-
-Run `depmod` after installing kernel module packages to update the kernel module dependency database:
-
-```bash
-sudo depmod -a
-```
-
-The required modules can then be loaded manually:
-
-```bash
-sudo modprobe tun
-sudo modprobe nls_utf8
-sudo modprobe wireguard
-sudo modprobe cifs
-```
-
-For CIFS, loading `cifs` may automatically load required dependency modules such as:
+For example, loading `cifs` may automatically load:
 
 ```text
 netfs
@@ -301,10 +324,43 @@ cifs_md4
 cifs_arc4
 ```
 
-Verify the loaded modules with:
+Similarly, `ovpn` may require:
 
-```bash
-lsmod | grep -E 'cifs|netfs|dns_resolver|cifs_md4|cifs_arc4'
+```text
+strparser
 ```
 
-This package set is intended to resolve missing kernel feature and module requirements when running **Tailscale, CIFS/SMB, Docker, and WireGuard** on supported Orange Pi systems.
+## Kernel Compatibility
+
+All modules and packages in this repository are built for:
+
+```text
+Kernel:      6.6.98-sun60iw2
+Architecture: ARM64
+```
+
+Before installing or loading any module, verify:
+
+```bash
+uname -r
+```
+
+The kernel must exactly match:
+
+```text
+6.6.98-sun60iw2
+```
+
+Using these packages with another kernel version may result in module loading errors, incompatible `vermagic`, or missing kernel symbols.
+
+## Purpose
+
+This package set is intended to provide missing kernel features and modules required by applications and services running on supported Orange Pi systems, including:
+
+* VPN and tunneling
+* WireGuard
+* OpenVPN DCO
+* CIFS/SMB network shares
+* Docker / OverlayFS
+* UTF-8 filename support
+* POSIX IPC
