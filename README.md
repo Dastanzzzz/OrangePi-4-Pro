@@ -176,6 +176,12 @@ lsmod | grep -qw wireguard && echo "OK" || echo "NOT LOADED"
 
 echo "=== CIFS ==="
 lsmod | grep -qw cifs && echo "OK" || echo "NOT LOADED"
+
+echo "=== OVPN DCO ==="
+lsmod | grep -qw ovpn && echo "ovpn: OK" || echo "ovpn: NOT LOADED"
+lsmod | grep -qw strparser && echo "strparser: OK" || echo "strparser: NOT LOADED"
+
+
 ```
 
 Expected output:
